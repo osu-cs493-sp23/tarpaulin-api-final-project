@@ -2,6 +2,10 @@ const mongoose = require('mongoose')
 const { Schema } = mongoose
 
 const assignmentSchema = new Schema({
+	courseid: {
+		type: Schema.ObjectId,
+		required: true
+    },
 	title: {
 		type: String,
 		required: true
