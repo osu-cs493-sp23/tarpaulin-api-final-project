@@ -17,7 +17,7 @@ const submissionSchema = new Schema({
 		default: Date.now
 	},
 	grade: {
-		type: Float,
+		type: Number,
 		required: true
 	},
 	file: {
