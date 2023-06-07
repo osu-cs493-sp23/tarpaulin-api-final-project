@@ -24,35 +24,66 @@ const userSchema = new Schema({
 	}
 });
 const User = mongoose.model('User', userSchema)
+exports.User = User
 
-exports.getUserByEmail = async function(email, includePassword){
+const getUserByEmail = async function (email, includePassword) {
 	try {
 		const projection = includePassword ? {} : { password: 0 };
-		const user = await User.findOne({ email : email }).select(projection).exec();
+		const user = await User.findOne({ email: email }).select(projection).exec();
 		return user;
 	} catch (error) {
 		console.error(error);
 		return null;
 	}
 }
+exports.getUserByEmail = getUserByEmail
 
-exports.insertNewUser = async function(user){
-	try{
-		const validationError = user.validateSync()
-		if(validationError){
-			res.status(400).send({ error: validationError.message })
-		}
+exports.getUserById = async function (id, includePassword) {
+	try {
+		const projection = includePassword ? {} : { password: 0 };
+		const user = await User.findById(id).select(projection).exec();
+		return user;
+	} catch (error) {
+		console.error(error);
+		return null;
+	}
 
+};
+
+exports.insertNewUser = async function (user) {
+	try {
 		let userToInsert = user
 		const hash = await bcrypt.hash(user.password, 10)
 		user.password = hash
 		const newUser = await User.create(userToInsert)
-		return newUser._id
-	}catch(err){
+		return newUser
+	} catch (err) {
 		console.log(err)
 		throw err
 	}
 }
 
+exports.validateUser = async function (id, password) {
+	const user = await getUserByEmail(id, true)
+	if (user && await bcrypt.compare(password, user.password)) {
+		console.log("- successful validation of user")
+		return user._id
+	} else {
+		console.log("returned NULL")
+		return null
+	}
+}
 
-exports.User = mongoose.model('User', userSchema)
+exports.getInstructorCourses = async function (instructorId) {
+	try {
+
+	} catch (err) {
+
+	}
+}
+
+exports.getStudentCourses = async function (studentId) {
+	try {
+	} catch {
+	}
+}
