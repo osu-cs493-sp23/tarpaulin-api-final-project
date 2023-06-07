@@ -22,3 +22,5 @@ router.post('/', requireAuthentication, async function(req, res, next){
 		res.status(400).send( { err: err } )
 	}
 })
+
+module.exports = router
