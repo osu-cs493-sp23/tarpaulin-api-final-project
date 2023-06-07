@@ -18,7 +18,7 @@ router.post('/', validateUserOptional, async function(req, res, next){
 		const user = req.body
 
 		if( ((user.role === 'admin') || (user.role === 'instructor')) && (req.role != 'admin')){
-			res.status(403).send(error: "Only admins can create admin/instructor accounts.")
+			res.status(403).send({ error: "Only admins can create admin/instructor accounts." })
 		}
 		const id = await insertNewUser(user)
 		res.status(200).send( { _id: id } )
