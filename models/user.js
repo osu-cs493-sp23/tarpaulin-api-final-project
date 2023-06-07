@@ -2,6 +2,7 @@ const mongoose = require('mongoose')
 const { Schema } = mongoose
 
 const bcrypt = require('bcrypt')
+const Course = require('./course')
 
 const userSchema = new Schema({
 	name: {
@@ -73,15 +74,25 @@ exports.validateUser = async function (id, password) {
 }
 
 exports.getInstructorCourses = async function (instructorId) {
+	const instructorId = instructorId
 	try {
-
+		const instructorCourses = await Course.find( {instructorid: instructorId  } )
+		res.status(200).send({
+			instructorCourses: instructorCourses
+		})
 	} catch (err) {
-
+		console.error(err)
 	}
 }
 
 exports.getStudentCourses = async function (studentId) {
+	const studentId = studentId
 	try {
-	} catch {
+		const studentCourses = await Course.find( { studentId: studentId  } )
+		res.send(200).send({
+			studentCourses: studentCourses
+		})
+	} catch(err){
+		console.error(err)
 	}
 }
