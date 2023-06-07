@@ -1,15 +1,11 @@
 const { Router } = require('express')
 const router = Router()
 
-const mongoose = require('mongoose')
-const { Schema } = mongoose
+const { requireAuthentication } = require("../lib/auth")
 
-const {
-	userSchema,
-	insertNewUser,
-} = require('../model/user')
+const { insertNewUser } = require('../model/user')
 
-router.post('/', validateUserOptional, async function(req, res, next){
+router.post('/', requireAuthentication, async function(req, res, next){
 	try{
 		const validationError = req.validateSync()
 		if(validationError){
