@@ -16,7 +16,7 @@ router.post('/', requireAuthentication, async function (req, res, next) {
 
     const user = await getUserById(course.instructorid)
 
-    if (user.role !== "instructor") {
+    if (user.role === "student") {
         res.status(403).send({
             err: "User is not an instructor."
         })

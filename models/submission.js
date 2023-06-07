@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 const { Schema } = mongoose
-const { ObjectId, GridFSBucket } = require('mongodb')
+const fs = require("fs")
 
 const submissionSchema = new Schema({
 	assignmentid: {
@@ -20,7 +20,7 @@ const submissionSchema = new Schema({
 		type: Number,
 		required: true
 	},
-	file: {
+	submission: {
 		type: String,
 		required: true
 	}
@@ -31,18 +31,20 @@ exports.Submission = mongoose.model('Submission', submissionSchema)
 
 exports.saveSubmissionFile = async function (submission) {
 	return new Promise(function (resolve, reject) {
-		const db = getDbReference()
-		const bucket = new mongoose.mongo.GridFSBucket(db, { bucketName: "submissions" })
+		const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: "submissions" })
 		const metadata = {
-			assignmentid: submission.assignemntid,
+			assignmentid: submission.assignmentid,
 			studentid: submission.studentid,
 			timestamp: submission.timestamp,
-			grade: submission.grade
+			grade: submission.grade,
+			contentType: submission.contentType
 		}
 		const uploadStream = bucket.openUploadStream(
-			submission.file,
+			submission.submission,
 			{ metadata: metadata }
 		)
+		console.log("path", submission.path)
+
 		fs.createReadStream(submission.path).pipe(uploadStream)
 			.on("error", function (err) {
 				reject(err)
