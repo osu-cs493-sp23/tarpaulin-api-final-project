@@ -63,7 +63,7 @@ router.post('/', requireAuthentication, async function (req, res, next) {
 router.get('/:assignmentid', async function (req, res, next) {
     const assignmentId = req.params.assignmentid
     try {
-        const assignment = await Business.findById(assignmentId)
+        const assignment = await Assignment.findById(assignmentId)
 
         if (assignment) {
             res.status(200).send(assignment)
@@ -79,7 +79,7 @@ router.get('/:assignmentid', async function (req, res, next) {
 
 router.patch('/:assignmentid', requireAuthentication, async function (req, res, next) {
     const assignmentId = req.params.assignmentid
-    const assignment = await Business.findById(assignmentId)
+    const assignment = await Assignment.findById(assignmentId)
     const options = { new: true }
 
     const course = await Course.findById(assignment.courseid)
@@ -87,7 +87,7 @@ router.patch('/:assignmentid', requireAuthentication, async function (req, res, 
     if (req.user === course.instructorid.toString() || req.role === "admin") {
         try {
             const assignmentToUpdate = await Assignment.findByIdAndUpdate(assignmentId, req.body, options)
-            if (businessToUpdate) {
+            if (assignmentToUpdate) {
                 res.status(200).send(assignmentToUpdate)
             }
             else {
@@ -107,12 +107,12 @@ router.patch('/:assignmentid', requireAuthentication, async function (req, res, 
 
 router.delete('/:assignmentid', requireAuthentication, async function (req, res, next) {
     const assignmentId = req.params.assignmentid
-    const assignment = await Assignemnt.findById(assignmentId)
+    const assignment = await Assignment.findById(assignmentId)
     const course = await Course.findById(assignment.courseid)
 
     if (req.user === course.instructorid.toString() || req.role === "admin") {
         try {
-            const assignmentToDelete = await Business.findByIdAndDelete(businessId);
+            const assignmentToDelete = await Assignment.findByIdAndDelete(assignmentId);
             if (assignmentToDelete) {
                 res.status(204).send()
             }
@@ -197,16 +197,19 @@ router.get('/:assignmentid/submissions', requireAuthentication, async function (
 
 router.post('/:assignmentid/submissions', requireAuthentication, upload.single("submissions"), async function (req, res, next) {
     const assignmentId = req.params.assignmentid
-    const submission = new Submission(req.body)
+    const submission = new Submission({
+        assignmentid: assignmentId,
+        ...req.body
+    })
     const validationError = submission.validateSync()
 
     if (validationError) {
         res.status(400).send({ error: validationError.message })
     }
 
-    if (submission.assignmentid === assignmentId) {
-        res.status(400).send({ error: "Improper submission. Submitting for wrong assignment." })
-    }
+    /*if (submission.assignmentid === assignmentId) {
+        res.status(403).send({ error: "Improper submission. Submitting for wrong assignment." })
+    }*/
 
     if ((req.user === submission.studentid.toString() && req.role === "student") || req.role === "admin") {
         try {
