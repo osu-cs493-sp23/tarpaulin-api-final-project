@@ -21,7 +21,33 @@ const courseSchema = new Schema({
 	instructorid: {
 		type: Schema.ObjectId,
 		required: true
-	}
+	},
+	rooster: {
+		type: [Schema.ObjectId],
+		default: [],
+		required: false
+    }
 });
 
-exports.Course = mongoose.model('Course', courseSchema)
+const Course = mongoose.model('Course', courseSchema)
+exports.Course = Course
+
+exports.addStudentsToRooster = async function (id, students) {
+	try {
+		const result = await Course.findByIdAndUpdate(id, { $push: { rooster: { $each: students } } }, { new: true })
+		return result
+	}
+	catch(e) {
+		return e
+	}
+}
+
+exports.removeStudentsToRooster = async function (id, students) {
+	try {
+		const result = await Course.findByIdAndUpdate(id, { $pull: { rooster: { $in: students } } }, { new: true })
+		return result
+	}
+	catch (e) {
+		return e
+	}
+}
