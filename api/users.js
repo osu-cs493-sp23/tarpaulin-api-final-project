@@ -4,7 +4,9 @@ const router = Router()
 const {
 	insertNewUser,
 	validateUser,
-	getUserByEmail
+	getUserByEmail,
+	getInstructorCourses,
+	getStudentCourses
 } = require('../models/user')
 
 const { generateAuthToken, checkAdmin } = require('../lib/auth')
@@ -57,5 +59,33 @@ router.post('/login', async function (req, res, next) {
 		})
 	}
 });
+
+router.get('/:userid', requireAuthentication, async function( req, res, next ){
+	if(req.user === req.params.userid || req.role === 'admin'){
+		try {
+			if(req.role === 'instructor'){
+				const instructorCourses = getInstructorCourses(userid)
+				if(instructorCourses){
+					res.status(200).send(instructorCourses)
+				}
+			}
+			if(req.role === 'student'){
+				const studentCourses = getStudentCourses(userid)
+				if(studentCourses){
+					res.status(200).send(studentCourses)
+				}
+			}else{
+				const user = req.user
+				res.status(200).send(user)
+			}
+		}catch(err) {
+			console.error(err)
+		}
+	}else {
+		res.status(403).send({
+			error: "Unauthorized accessed to data."
+		})
+	}
+})
 
 module.exports = router
