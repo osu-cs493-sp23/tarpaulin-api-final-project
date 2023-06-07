@@ -3,9 +3,9 @@ const { Router } = require('express')
 const multer = require("multer")
 const crypto = require("node:crypto")
 
-const { Assignment } = require('../models/assignment')
+const { Assignment, getSubmissionsByAssignmentId } = require('../models/assignment')
 const { Course } = require('../models/course')
-const { Submission } = require('../models/submission')
+const { Submission, saveSubmissionFile } = require('../models/submission')
 const { User } = require('../models/user')
 const { requireAuthentication } = require("../lib/auth")
 
@@ -30,7 +30,7 @@ const upload = multer({
         }
     }),
     fileFilter: (req, file, callback) => {
-        callback(null, !!imageTypes[file.mimetype])
+        callback(null, !!fileTypes[file.mimetype])
     }
 })
 
@@ -63,7 +63,7 @@ router.post('/', requireAuthentication, async function (req, res, next) {
 router.get('/:assignmentid', async function (req, res, next) {
     const assignmentId = req.params.assignmentid
     try {
-        const assignment = await Business.findById(assignmentId)
+        const assignment = await Assignment.findById(assignmentId)
 
         if (assignment) {
             res.status(200).send(assignment)
@@ -79,7 +79,7 @@ router.get('/:assignmentid', async function (req, res, next) {
 
 router.patch('/:assignmentid', requireAuthentication, async function (req, res, next) {
     const assignmentId = req.params.assignmentid
-    const assignment = await Business.findById(assignmentId)
+    const assignment = await Assignment.findById(assignmentId)
     const options = { new: true }
 
     const course = await Course.findById(assignment.courseid)
@@ -87,7 +87,7 @@ router.patch('/:assignmentid', requireAuthentication, async function (req, res, 
     if (req.user === course.instructorid.toString() || req.role === "admin") {
         try {
             const assignmentToUpdate = await Assignment.findByIdAndUpdate(assignmentId, req.body, options)
-            if (businessToUpdate) {
+            if (assignmentToUpdate) {
                 res.status(200).send(assignmentToUpdate)
             }
             else {
@@ -107,12 +107,12 @@ router.patch('/:assignmentid', requireAuthentication, async function (req, res, 
 
 router.delete('/:assignmentid', requireAuthentication, async function (req, res, next) {
     const assignmentId = req.params.assignmentid
-    const assignment = await Assignemnt.findById(assignmentId)
+    const assignment = await Assignment.findById(assignmentId)
     const course = await Course.findById(assignment.courseid)
 
     if (req.user === course.instructorid.toString() || req.role === "admin") {
         try {
-            const assignmentToDelete = await Business.findByIdAndDelete(businessId);
+            const assignmentToDelete = await Assignment.findByIdAndDelete(assignmentId);
             if (assignmentToDelete) {
                 res.status(204).send()
             }
@@ -133,12 +133,12 @@ router.delete('/:assignmentid', requireAuthentication, async function (req, res,
 
 router.get('/:assignmentid/submissions', requireAuthentication, async function (req, res, next) {
     const assignmentId = req.params.assignmentid
-    const assignment = await Assignemnt.findById(assignmentId)
+    const assignment = await Assignment.findById(assignmentId)
     const course = await Course.findById(assignment.courseid)
 
     if (req.user === course.instructorid.toString() || req.role === "admin") {
         try {
-            const result = await Submission.find({ assignemntid: assignmentId })
+            const result = await getSubmissionsByAssignmentId(assignmentId)
 
             let page = parseInt(req.query.page) || 1
             page = page < 1 ? 1 : page
@@ -146,7 +146,7 @@ router.get('/:assignmentid/submissions', requireAuthentication, async function (
             const offset = (page - 1) * numPerPage
 
             const studentId = req.query.studentId || null
-
+            
             const student = User.findById(studentId)
 
             if (!student) {
@@ -195,23 +195,41 @@ router.get('/:assignmentid/submissions', requireAuthentication, async function (
     }
 })
 
-router.post('/:assignmentid/submissions', requireAuthentication, upload.single("submissions"), async function (req, res, next) {
+router.post('/:assignmentid/submissions', requireAuthentication, upload.single("submission"), async function (req, res, next) {
     const assignmentId = req.params.assignmentid
-    const submission = new Submission(req.body)
-    const validationError = submission.validateSync()
+    let submission = null
+    if (req.role === "student") {
+        submission = {
+            assignmentid: assignmentId,
+            studentid: submission.studentid,
+            submission: req.file.filename,
+            contentType: req.file.mimetype,
+            path: req.file.path,
+            ...req.body
+        }
+    }
+    else {
+        submission = {
+            assignmentid: assignmentId,
+            submission: req.file.filename,
+            contentType: req.file.mimetype,
+            path: req.file.path,
+            ...req.body
+        }
+    }
+
+    console.log("assignmentId", submission.assignmentid)
+
+    /*const validationError = submission.validateSync()
 
     if (validationError) {
         res.status(400).send({ error: validationError.message })
-    }
-
-    if (submission.assignmentid === assignmentId) {
-        res.status(400).send({ error: "Improper submission. Submitting for wrong assignment." })
-    }
+    }*/
 
     if ((req.user === submission.studentid.toString() && req.role === "student") || req.role === "admin") {
         try {
-            await submission.save()
-            res.status(201).send({ id: submission._id })
+            const id = await saveSubmissionFile(submission)
+            res.status(201).send({ id: id })
         }
         catch (e) {
             res.status(400).send({ error: e.message })
