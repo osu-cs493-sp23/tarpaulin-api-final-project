@@ -1,0 +1,23 @@
+[
+  {
+    "subject": "CS",
+    "number": "493",
+    "title": "Cloud Application Development",
+    "term": "sp23",
+    "instructorid": "{placeholderid}"
+  },
+  {
+    "subject": "CS",
+    "number": "492",
+    "title": "Mobile Application Development",
+    "term": "w23",
+    "instructorid": "{placeholderid}"
+  },
+  {
+    "subject": "COMM",
+    "number": "111",
+    "title": "Public Speaking",
+    "term": "w22",
+    "instructorid": "{placeholderid}"
+  }
+]
