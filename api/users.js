@@ -7,6 +7,9 @@ const { Schema } = mongoose
 const {
 	userSchema,
 	insertNewUser,
+	validateUser,
+	getUserById,
+	getUserByEmail
 } = require('../model/user')
 
 router.post('/', validateUserOptional, async function(req, res, next){
@@ -26,3 +29,32 @@ router.post('/', validateUserOptional, async function(req, res, next){
 		res.status(400).send( { err: err } )
 	}
 })
+
+router.post('/login', async function (req, res, next) {
+	if(req.body && req.body.email && req.body.password){
+		try{
+			const authenticated = await validateUser(
+				req.body.email,
+				req.body.password
+			)
+			const user = await getUserByEmail(req.body.email)
+			console.log('user.admin', user.admin)
+			if(authenticated) {
+				const token = generateAuthToken(authenticated, user.role)
+				res.status(200).send({
+					token: token
+				})
+			}else {
+				res.status(401).send({
+					error: "Invalid authentication credentials"
+				})
+			}
+		}catch(err) {
+			next(err)
+		}
+	}else{
+		res.status(400).send({
+			error: "Request body requires `id` and `password`."
+		})
+	}
+});
