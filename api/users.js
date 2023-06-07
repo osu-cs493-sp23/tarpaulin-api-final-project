@@ -3,7 +3,7 @@ const router = Router()
 
 const { requireAuthentication } = require("../lib/auth")
 
-const { insertNewUser } = require('../model/user')
+const { insertNewUser } = require('../models/user')
 
 router.post('/', requireAuthentication, async function(req, res, next){
 	try{
