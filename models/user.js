@@ -67,10 +67,8 @@ exports.insertNewUser = async function (user) {
 exports.validateUser = async function (id, password) {
 	const user = await getUserByEmail(id, true)
 	if (user && await bcrypt.compare(password, user.password)) {
-		console.log("- successful validation of user")
 		return user._id
 	} else {
-		console.log("returned NULL")
 		return null
 	}
 }

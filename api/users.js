@@ -9,10 +9,10 @@ const {
 	getStudentCourses
 } = require('../models/user')
 
-const { generateAuthToken, checkAdmin } = require('../lib/auth')
+const { generateAuthToken, checkRole } = require('../lib/auth')
 
 router.post('/', async function (req, res, next) {
-	if (req.body.role === "student" || (checkAdmin(req) === "admin" && (req.body.role === "admin" || req.body.role === "instructor"))) {
+	if (req.body.role === "student" || (checkRole(req) === "admin" && (req.body.role === "admin" || req.body.role === "instructor"))) {
 		try {
 			const user = await insertNewUser(req.body)
 			const validationError = user.validateSync()
@@ -38,8 +38,8 @@ router.post('/login', async function (req, res, next) {
 				req.body.email,
 				req.body.password
 			)
+			console.log("authenticated", authenticated)
 			const user = await getUserByEmail(req.body.email)
-			console.log('user.admin', user.admin)
 			if (authenticated) {
 				const token = generateAuthToken(authenticated, user.role)
 				res.status(200).send({
