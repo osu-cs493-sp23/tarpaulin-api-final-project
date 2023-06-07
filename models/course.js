@@ -21,6 +21,10 @@ const courseSchema = new Schema({
 	instructorid: {
 		type: Schema.ObjectId,
 		required: true
+	},
+	studentid: {
+		type: Schema.Objectid,
+		required: false
 	}
 });
 
