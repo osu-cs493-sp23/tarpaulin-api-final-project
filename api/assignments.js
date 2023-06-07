@@ -44,7 +44,7 @@ router.post('/', requireAuthentication, async function (req, res, next) {
 
     const course = await Course.findById(assignment.courseid)
 
-    if (req.user === course.instructorid.toString() || req.admin) {
+    if (req.user === course.instructorid.toString() || req.role === "admin") {
         try {
             await assignment.save()
             res.status(201).send({ id: assignment._id })
@@ -84,7 +84,7 @@ router.patch('/:assignmentid', requireAuthentication, async function (req, res, 
 
     const course = await Course.findById(assignment.courseid)
 
-    if (req.user === course.instructorid.toString() || req.admin) {
+    if (req.user === course.instructorid.toString() || req.role === "admin") {
         try {
             const assignmentToUpdate = await Assignment.findByIdAndUpdate(assignmentId, req.body, options)
             if (businessToUpdate) {
@@ -110,7 +110,7 @@ router.delete('/:assignmentid', requireAuthentication, async function (req, res,
     const assignment = await Assignemnt.findById(assignmentId)
     const course = await Course.findById(assignment.courseid)
 
-    if (req.user === course.instructorid.toString() || req.admin) {
+    if (req.user === course.instructorid.toString() || req.role === "admin") {
         try {
             const assignmentToDelete = await Business.findByIdAndDelete(businessId);
             if (assignmentToDelete) {
@@ -136,7 +136,7 @@ router.get('/:assignmentid/submissions', requireAuthentication, async function (
     const assignment = await Assignemnt.findById(assignmentId)
     const course = await Course.findById(assignment.courseid)
 
-    if (req.user === course.instructorid.toString() || req.admin) {
+    if (req.user === course.instructorid.toString() || req.role === "admin") {
         try {
             const result = await Submission.find({ assignemntid: assignmentId })
 
@@ -176,7 +176,7 @@ router.get('/:assignmentid/submissions', requireAuthentication, async function (
                 * Construct and send response.
                 */
             res.status(200).json({
-                businesses: pageAssignments,
+                assignments: pageAssignments,
                 pageNumber: page,
                 totalPages: lastPage,
                 pageSize: numPerPage,
@@ -208,7 +208,7 @@ router.post('/:assignmentid/submissions', requireAuthentication, upload.single("
         res.status(400).send({ error: "Improper submission. Submitting for wrong assignment." })
     }
 
-    if ((req.user === submission.studentid.toString() && req.role === "student") || req.admin) {
+    if ((req.user === submission.studentid.toString() && req.role === "student") || req.role === "admin") {
         try {
             await submission.save()
             res.status(201).send({ id: submission._id })

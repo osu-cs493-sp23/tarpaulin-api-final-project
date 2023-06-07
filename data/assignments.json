@@ -1,0 +1,50 @@
+[
+  {
+    "courseid": "{placeholderid}",
+    "title": "API Design and server implmentation",
+    "points": 100,
+    "due": "2023-04-24T23:59:00-07:00"
+  },
+  {
+    "courseid": "{placeholderid}",
+    "title": "API data storage",
+    "points": 100,
+    "due": "2023-05-08T23:59:00-07:00"
+  },
+  {
+    "courseid": "{placeholderid}",
+    "title": "API authentication and authorization",
+    "points": 100,
+    "due": "2023-05-22T23:59:00-07:00"
+  },
+  {
+    "courseid": "{placeholderid}",
+    "title": "File uploads and offline work",
+    "points": 100,
+    "due": "2023-06-05T23:59:00-07:00"
+  },
+  {
+    "courseid": "{placeholderid}",
+    "title": "Taurplin API Final Project",
+    "points": 100,
+    "due": "2023-06-16T23:59:00-07:00"
+  },
+  {
+    "courseid": "{placeholderid}",
+    "title": "RecyclerView-based weather app",
+    "points": 100,
+    "due": "2023-04-14T23:59:00-07:00"
+  },
+  {
+    "courseid": "{placeholderid}",
+    "title": "A weather app with internet connectivity and Intents",
+    "points": 100,
+    "due": "2023-05-08T23:59:00-07:00"
+  },
+  {
+    "courseid": "{placeholderid}",
+    "title": "A lifecycle-aware weather app with user preferences",
+    "points": 100,
+    "due": "2023-05-22T23:59:00-07:00"
+  }
+]
