@@ -2,6 +2,7 @@ const { Router } = require('express')
 const router = Router()
 
 const {
+	User,
 	insertNewUser,
 	validateUser,
 	getUserByEmail,
@@ -9,7 +10,7 @@ const {
 	getStudentCourses
 } = require('../models/user')
 
-const { generateAuthToken, checkRole } = require('../lib/auth')
+const { generateAuthToken, requireAuthentication, checkRole } = require('../lib/auth')
 
 router.post('/', async function (req, res, next) {
 	if (req.body.role === "student" || (checkRole(req) === "admin" && (req.body.role === "admin" || req.body.role === "instructor"))) {
@@ -20,7 +21,7 @@ router.post('/', async function (req, res, next) {
 				res.status(400).send({ error: validationError.message })
 			}
 
-			res.status(200).send({ _id: user._id })
+			res.status(201).send({ _id: user._id })
 		}
 		catch (err) {
 			res.status(400).send({ err: err })
@@ -42,7 +43,7 @@ router.post('/login', async function (req, res, next) {
 			const user = await getUserByEmail(req.body.email)
 			if (authenticated) {
 				const token = generateAuthToken(authenticated, user.role)
-				res.status(200).send({
+				res.status(201).send({
 					token: token
 				})
 			} else {
@@ -61,22 +62,23 @@ router.post('/login', async function (req, res, next) {
 });
 
 router.get('/:userid', requireAuthentication, async function( req, res, next ){
-	if(req.user === req.params.userid || req.role === 'admin'){
+	const userId = req.params.userid
+	const user = await User.findById(userId)
+	if (req.user === userId || req.role === 'admin') {
 		try {
-			if(req.role === 'instructor'){
-				const instructorCourses = getInstructorCourses(userid)
-				if(instructorCourses){
-					res.status(200).send(instructorCourses)
-				}
+			if ((req.role === 'instructor' || req.role === 'admin') && user.role === 'instructor') {
+				const instructorCourses = await getInstructorCourses(userId)
+				return res.status(200).send({
+					user,
+					coursestaught: instructorCourses || "No courses taught"
+				})
 			}
-			if(req.role === 'student'){
-				const studentCourses = getStudentCourses(userid)
-				if(studentCourses){
-					res.status(200).send(studentCourses)
-				}
-			}else{
-				const user = req.user
-				res.status(200).send(user)
+			if ((req.role === 'student' || req.role === 'admin') && user.role === 'student') {
+				const studentCourses = await getStudentCourses(userId)
+				return res.status(200).send({
+					user,
+					coursestaken: studentCourses || "No courses taken"
+				})
 			}
 		}catch(err) {
 			console.error(err)
