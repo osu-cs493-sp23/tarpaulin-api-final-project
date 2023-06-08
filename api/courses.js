@@ -40,6 +40,8 @@ router.post('/', requireAuthentication, async function (req, res, next) {
 
 
 
+
+
 router.get('/:courseid/students', requireAuthentication, async function (req, res, next) {
     const courseId = req.params.courseid
     const course = await Course.findById(courseId)
