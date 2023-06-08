@@ -51,3 +51,6 @@ exports.removeStudentsToRooster = async function (id, students) {
 		return e
 	}
 }
+
+exports.Course = mongoose.model('Course', courseSchema)
+}
