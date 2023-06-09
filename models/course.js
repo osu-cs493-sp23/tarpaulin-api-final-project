@@ -22,7 +22,7 @@ const courseSchema = new Schema({
 		type: Schema.ObjectId,
 		required: true
 	},
-	rooster: {
+	roster: {
 		type: [Schema.ObjectId],
 		default: [],
 		required: false
@@ -32,9 +32,9 @@ const courseSchema = new Schema({
 const Course = mongoose.model('Course', courseSchema)
 exports.Course = Course
 
-exports.addStudentsToRooster = async function (id, students) {
+exports.addStudentsToRoster = async function (id, students) {
 	try {
-		const result = await Course.findByIdAndUpdate(id, { $push: { rooster: { $each: students } } }, { new: true })
+		const result = await Course.findByIdAndUpdate(id, { $push: { roster: { $each: students } } }, { new: true })
 		return result
 	}
 	catch(e) {
@@ -42,9 +42,9 @@ exports.addStudentsToRooster = async function (id, students) {
 	}
 }
 
-exports.removeStudentsToRooster = async function (id, students) {
+exports.removeStudentsToRoster = async function (id, students) {
 	try {
-		const result = await Course.findByIdAndUpdate(id, { $pull: { rooster: { $in: students } } }, { new: true })
+		const result = await Course.findByIdAndUpdate(id, { $pull: { roster: { $in: students } } }, { new: true })
 		return result
 	}
 	catch (e) {
@@ -53,4 +53,3 @@ exports.removeStudentsToRooster = async function (id, students) {
 }
 
 exports.Course = mongoose.model('Course', courseSchema)
-}
