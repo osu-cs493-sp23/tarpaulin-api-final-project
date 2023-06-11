@@ -52,4 +52,3 @@ exports.removeStudentsToRoster = async function (id, students) {
 	}
 }
 
-exports.Course = mongoose.model('Course', courseSchema)
