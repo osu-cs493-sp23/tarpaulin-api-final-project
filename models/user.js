@@ -3,6 +3,8 @@ const { Schema } = mongoose
 
 const bcrypt = require('bcrypt')
 const { Course } = require('./course')
+require('events').EventEmitter.defaultMaxListeners = 15;
+
 
 const userSchema = new Schema({
 	name: {
@@ -39,7 +41,7 @@ const getUserByEmail = async function (email, includePassword) {
 }
 exports.getUserByEmail = getUserByEmail
 
-exports.getUserById = async function (id, includePassword) {
+const getUserById = async function (id, includePassword) {
 	try {
 		const projection = includePassword ? {} : { password: 0 };
 		const user = await User.findById(id).select(projection).exec();
@@ -50,6 +52,7 @@ exports.getUserById = async function (id, includePassword) {
 	}
 
 };
+exports.getUserById = getUserById
 
 exports.insertNewUser = async function (user) {
 	try {
@@ -81,4 +84,17 @@ exports.getInstructorCourses = async function (instructorId) {
 exports.getStudentCourses = async function (studentId) {
 	const studentCourses = await Course.find({ rooster: { $in: [studentId] } }).select({ _id: 1 })
 	return studentCourses
+}
+
+exports.convertRosterToCSV = async function (students) {
+	try {
+		let studentsCSV = ''
+		for (id of students) {
+			const user = await getUserById(id)
+			studentsCSV += user._id + ", " + user.name + ", " + user.email + "\n"
+		}
+		return studentsCSV
+	} catch (e) {
+		return e
+	}
 }

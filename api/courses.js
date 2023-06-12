@@ -1,9 +1,11 @@
 const { Router } = require('express')
 
 const { Course, addStudentsToRoster, removeStudentsToRoster } = require('../models/course')
+const { convertRosterToCSV } = require('../models/user')
 const { getUserById } = require('../models/user')
 const { requireAuthentication } = require("../lib/auth")
 const { getDbReference } = require("../lib/mongo")
+const { Assignment } = require("../models/assignment")
 
 const router = Router()
 
@@ -258,11 +260,35 @@ router.post('/:courseid/students', requireAuthentication, async function (req, r
 /*
  * Fetch a CSV file containing list of the students enrolled in the Course
 */
-
+router.get('/:courseid/roster', requireAuthentication, async function (req, res, next) {
+    const courseId = req.params.courseid
+    
+    const course = await Course.findById(courseId)
+    if (req.user === course.instructorid.toString() || req.role === "admin") {
+        try {
+            const students = await convertRosterToCSV(course.roster)
+            res.status(200).type('text/csv').send(students)
+        } catch (e) {
+            next(e)
+        }
+    }
+})
 
 /*
  * Fetch a list of the Assignments for the Course
 */
+router.get('/:courseid/assignments', async function (req, res, next) {
+    const courseId = req.params.courseid    
+
+    const course = await Course.findById(courseId)
+    try {
+        const assignments = await Assignment.find( { courseid: courseId } )
+        res.status(200).send(assignments)
+    } catch (e) {
+        next(e)
+    }
+
+})
 
 
 module.exports = router
