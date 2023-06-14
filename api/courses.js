@@ -94,7 +94,7 @@ router.post('/', requireAuthentication, async function (req, res, next) {
     const user = await getUserById(course.instructorid)
 
     if (user.role !== "instructor") {
-        res.status(403).send({
+        res.status(400).send({
             err: "User is not an instructor."
         })
     }
@@ -121,7 +121,7 @@ router.post('/', requireAuthentication, async function (req, res, next) {
 router.get('/:courseid', async function (req, res, next) {
     const courseId = req.params.courseid
     try {
-        const course = await Course.findById(courseId)
+        const course = await Course.findById(courseId, { roster: 0 })
 
         if (course) {
             res.status(200).send(course)
@@ -198,27 +198,32 @@ router.delete('/:courseid', requireAuthentication, async function (req, res, nex
 */
 router.get('/:courseid/students', requireAuthentication, async function (req, res, next) {
     const courseId = req.params.courseid
-    const course = await Course.findById(courseId)
-    if (req.user === course.instructorid.toString() || req.role === "admin") {
-        try {
-            let students = []
-            for (const id of course.roster) {
-                const student = await getUserById(id)
-                students.push(student)
-            }
+    try {
+        const course = await Course.findById(courseId)
+        if (req.user === course.instructorid.toString() || req.role === "admin") {
+            try {
+                let students = []
+                for (const id of course.roster) {
+                    const student = await getUserById(id)
+                    students.push(student)
+                }
 
-            res.status(200).send({
-                students: students
+                res.status(200).send({
+                    students: students
+                })
+            }
+            catch (e) {
+                next()
+            }
+        }
+        else {
+            res.status(403).send({
+                err: "Unauthorized to access roster."
             })
         }
-        catch (e) {
-            res.status(400).send({ error: e.message })
-        }
     }
-    else {
-        res.status(403).send({
-            err: "Unauthorized to update roster."
-        })
+    catch (e) {
+        next()
     }
 })
 
@@ -227,18 +232,23 @@ router.get('/:courseid/students', requireAuthentication, async function (req, re
 */
 router.post('/:courseid/students', requireAuthentication, async function (req, res, next) {
     const courseId = req.params.courseid
-    const course = await Course.findById(courseId)
     try {
+        const course = await Course.findById(courseId)
         if (req.user === course.instructorid.toString() || req.role === "admin") {
-            let updatedRoster = null
-            if (req.body.add) {
-                updatedRoster = addStudentsToRoster(courseId, req.body.add)
+            try {
+
+                let updatedRoster = null
+                if (req.body.add) {
+                    updatedRoster = addStudentsToRoster(courseId, req.body.add)
+                }
+                if (req.body.remove) {
+                    updatedRoster = removeStudentsFromRoster(courseId, req.body.remove)
+                }
+                res.status(200).send({ message: "Successfully updated roster!" })
             }
-            if (req.body.remove) {
-                updatedRoster = removeStudentsFromRoster(courseId, req.body.remove)
+            catch (e) {
+                res.status(400).send({ error: e.message })
             }
-            res.status(200).send({ message: "Successfully updated roster!" })
-        
         }
         else {
             res.status(403).send({
@@ -247,7 +257,7 @@ router.post('/:courseid/students', requireAuthentication, async function (req, r
         }
     }
     catch (e) {
-        res.status(400).send({ error: e.message })
+        next()
     }
 })
 
@@ -257,15 +267,24 @@ router.post('/:courseid/students', requireAuthentication, async function (req, r
 */
 router.get('/:courseid/roster', requireAuthentication, async function (req, res, next) {
     const courseId = req.params.courseid
-    
-    const course = await Course.findById(courseId)
-    if (req.user === course.instructorid.toString() || req.role === "admin") {
-        try {
-            const students = await convertRosterToCSV(course.roster)
-            res.status(200).type('text/csv').send(students)
-        } catch (e) {
-            next(e)
+    try {
+        const course = await Course.findById(courseId)
+        if (req.user === course.instructorid.toString() || req.role === "admin") {
+            try {
+                const students = await convertRosterToCSV(course.roster)
+                res.status(200).type('text/csv').send(students)
+            } catch (e) {
+                next(e)
+            }
         }
+        else {
+            res.status(403).send({
+                err: "Unauthorized to access roster."
+            })
+        }
+    }
+    catch (e) {
+        next()
     }
 })
 
@@ -279,7 +298,7 @@ router.get('/:courseid/assignments', async function (req, res, next) {
         const assignments = await Assignment.find( { courseid: courseId } )
         res.status(200).send(assignments)
     } catch (e) {
-        next(e)
+        next()
     }
 
 })

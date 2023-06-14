@@ -4,7 +4,7 @@ const multer = require("multer")
 const crypto = require("node:crypto")
 
 const { Assignment, getSubmissionsByAssignmentId } = require('../models/assignment')
-const { Course } = require('../models/course')
+const { Course, isEnrolled } = require('../models/course')
 const { Submission, saveSubmissionFile } = require('../models/submission')
 const { User } = require('../models/user')
 const { requireAuthentication } = require("../lib/auth")
@@ -64,177 +64,195 @@ router.get('/:assignmentid', async function (req, res, next) {
     const assignmentId = req.params.assignmentid
     try {
         const assignment = await Assignment.findById(assignmentId)
-
-        if (assignment) {
-            res.status(200).send(assignment)
-        }
-        else {
-            next()
-        }
+        res.status(200).send(assignment)
     }
     catch (e) {
-        next(e)
+        next()
     }
 })
 
 router.patch('/:assignmentid', requireAuthentication, async function (req, res, next) {
     const assignmentId = req.params.assignmentid
-    const assignment = await Assignment.findById(assignmentId)
-    const options = { new: true }
 
-    const course = await Course.findById(assignment.courseid)
+    try {
+        const assignment = await Assignment.findById(assignmentId)
+        const options = { new: true }
 
-    if (req.user === course.instructorid.toString() || req.role === "admin") {
-        try {
-            const assignmentToUpdate = await Assignment.findByIdAndUpdate(assignmentId, req.body, options)
-            if (assignmentToUpdate) {
-                res.status(200).send(assignmentToUpdate)
+        const course = await Course.findById(assignment.courseid)
+
+        if (req.user === course.instructorid.toString() || req.role === "admin") {
+            try {
+                const assignmentToUpdate = await Assignment.findByIdAndUpdate(assignmentId, req.body, options)
+                if (assignmentToUpdate) {
+                    res.status(200).send(assignmentToUpdate)
+                }
+                else {
+                    next()
+                }
             }
-            else {
-                next()
+            catch (e) {
+                next(e)
             }
         }
-        catch (e) {
-            next(e)
+        else {
+            res.status(403).send({
+                err: "Unauthorized to edit for another user."
+            })
         }
     }
-    else {
-        res.status(403).send({
-            err: "Unauthorized to edit for another user."
-        })
+    catch (e) {
+        next()
     }
 })
 
 router.delete('/:assignmentid', requireAuthentication, async function (req, res, next) {
     const assignmentId = req.params.assignmentid
-    const assignment = await Assignment.findById(assignmentId)
-    const course = await Course.findById(assignment.courseid)
 
-    if (req.user === course.instructorid.toString() || req.role === "admin") {
-        try {
-            const assignmentToDelete = await Assignment.findByIdAndDelete(assignmentId);
-            if (assignmentToDelete) {
-                res.status(204).send()
+    try {
+        const assignment = await Assignment.findById(assignmentId)
+        const course = await Course.findById(assignment.courseid)
+
+        if (req.user === course.instructorid.toString() || req.role === "admin") {
+            try {
+                const assignmentToDelete = await Assignment.findByIdAndDelete(assignmentId);
+                if (assignmentToDelete) {
+                    res.status(204).send()
+                }
+                else {
+                    next()
+                }
             }
-            else {
-                next()
+            catch (e) {
+                next(e)
             }
         }
-        catch (e) {
-            next(e)
+        else {
+            res.status(403).send({
+                err: "Unauthorized to delete for another user."
+            })
         }
     }
-    else {
-        res.status(403).send({
-            err: "Unauthorized to delete for another user."
-        })
+    catch (e) {
+        next()
     }
 })
 
 router.get('/:assignmentid/submissions', requireAuthentication, async function (req, res, next) {
     const assignmentId = req.params.assignmentid
-    const assignment = await Assignment.findById(assignmentId)
-    const course = await Course.findById(assignment.courseid)
 
-    if (req.user === course.instructorid.toString() || req.role === "admin") {
-        try {
-            const result = await getSubmissionsByAssignmentId(assignmentId)
+    try {
+        const assignment = await Assignment.findById(assignmentId)
+        const course = await Course.findById(assignment.courseid)
 
-            let page = parseInt(req.query.page) || 1
-            page = page < 1 ? 1 : page
-            const numPerPage = 10
-            const offset = (page - 1) * numPerPage
+        if (req.user === course.instructorid.toString() || req.role === "admin") {
+            try {
+                const result = await getSubmissionsByAssignmentId(assignmentId)
 
-            const studentId = req.query.studentId || null
-            
-            const student = User.findById(studentId)
+                let page = parseInt(req.query.page) || 1
+                page = page < 1 ? 1 : page
+                const numPerPage = 10
+                const offset = (page - 1) * numPerPage
 
-            if (!student) {
-                next()
-            }
+                const studentId = req.query.studentId || null
 
-            /*
-            * Generate HATEOAS links for surrounding pages.
-            */
-            const lastPage = Math.ceil(result.length / numPerPage)
+                const student = User.findById(studentId)
 
-            const start = (page - 1) * numPerPage;
-            const end = start + numPerPage;
-            const pageAssignments = result.slice(start, end);
+                if (!student) {
+                    next()
+                }
 
-            const links = {}
-            if (page < lastPage) {
-                links.nextPage = `/assignments/${assignmentId}/submissions?page=${page + 1}`
-                links.lastPage = `/assignments/${assignmentId}/submissions?page=${lastPage}`
-            }
-            if (page > 1) {
-                links.prevPage = `/assignments/${assignmentId}/submissions?page=${page - 1}`
-                links.firstPage = '/assignments/${assignmentId}/submissions?page=1'
-            }
-
-            /*
-                * Construct and send response.
+                /*
+                * Generate HATEOAS links for surrounding pages.
                 */
-            res.status(200).json({
-                assignments: pageAssignments,
-                pageNumber: page,
-                totalPages: lastPage,
-                pageSize: numPerPage,
-                totalCount: result.length,
-                links: links
+                const lastPage = Math.ceil(result.length / numPerPage)
+
+                const start = (page - 1) * numPerPage;
+                const end = start + numPerPage;
+                const pageAssignments = result.slice(start, end);
+
+                const links = {}
+                if (page < lastPage) {
+                    links.nextPage = `/assignments/${assignmentId}/submissions?page=${page + 1}`
+                    links.lastPage = `/assignments/${assignmentId}/submissions?page=${lastPage}`
+                }
+                if (page > 1) {
+                    links.prevPage = `/assignments/${assignmentId}/submissions?page=${page - 1}`
+                    links.firstPage = '/assignments/${assignmentId}/submissions?page=1'
+                }
+
+                /*
+                    * Construct and send response.
+                    */
+                res.status(200).json({
+                    assignments: pageAssignments,
+                    pageNumber: page,
+                    totalPages: lastPage,
+                    pageSize: numPerPage,
+                    totalCount: result.length,
+                    links: links
+                })
+            }
+            catch (e) {
+                next(e)
+            }
+        }
+        else {
+            res.status(403).send({
+                err: "Unauthorized to delete for another user."
             })
         }
-        catch (e) {
-            next(e)
-        }
     }
-    else {
-        res.status(403).send({
-            err: "Unauthorized to delete for another user."
-        })
+    catch (e) {
+        next()
     }
 })
 
 router.post('/:assignmentid/submissions', requireAuthentication, upload.single("submission"), async function (req, res, next) {
     const assignmentId = req.params.assignmentid
     let submission = null
-    if (req.role === "student") {
-        submission = {
-            assignmentid: assignmentId,
-            studentid: submission.studentid,
-            timestamp: submission.timestamp || Date.now(),
-            submission: req.file.filename,
-            contentType: req.file.mimetype,
-            path: req.file.path,
-            ...req.body
+    try {
+        const assignment = await Assignment.findById(assignmentId)
+        if (req.role === "student") {
+            submission = {
+                assignmentid: assignmentId,
+                studentid: req.user,
+                timestamp: req.body.timestamp || Date.now(),
+                submission: req.file.filename,
+                grade: req.body.grade,
+                contentType: req.file.mimetype,
+                path: req.file.path
+            }
+        }
+        else {
+            submission = {
+                assignmentid: assignmentId,
+                studentid: req.body.studentid,
+                timestamp: req.body.timestamp || Date.now(),
+                grade: req.body.grade,
+                submission: req.file.filename,
+                contentType: req.file.mimetype,
+                path: req.file.path
+            }
         }
     }
-    else {
-        submission = {
-            assignmentid: assignmentId,
-            timestamp: submission.timestamp || Date.now(),
-            submission: req.file.filename,
-            contentType: req.file.mimetype,
-            path: req.file.path,
-            ...req.body
-        }
+    catch (e) {
+        next()
+        return
     }
-
-    console.log("assignmentId", submission.assignmentid)
-
-    /*const validationError = submission.validateSync()
-
-    if (validationError) {
-        res.status(400).send({ error: validationError.message })
-    }*/
 
     if ((req.user === submission.studentid.toString() && req.role === "student") || req.role === "admin") {
-        try {
-            const id = await saveSubmissionFile(submission)
-            res.status(201).send({ id: id })
-        }
-        catch (e) {
-            res.status(400).send({ error: e.message })
+        if (await isEnrolled(req.user, assignmentId) || req.role === "admin")
+            try {
+                const id = await saveSubmissionFile(submission)
+                res.status(201).send({ id: id })
+            }
+            catch (e) {
+                res.status(400).send({ error: e.message })
+            }
+        else {
+            res.status(403).send({
+                err: "Cannot submit an assignment to a class you do not attend."
+            })
         }
     }
     else {

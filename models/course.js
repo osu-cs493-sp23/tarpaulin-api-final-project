@@ -61,3 +61,13 @@ exports.getStudentCourses = async function (studentId) {
 	const studentCourses = await Course.find({ rooster: { $in: [studentId] } }).select({ _id: 1 })
 	return studentCourses
 }
+
+exports.isEnrolled = async function (studentId, courseId) {
+	const course = await Course.findById(courseId)
+	if (course && course.roster.includes(studentId)) {
+		return true
+	}
+	else {
+		return false 
+	}
+}

@@ -1,5 +1,6 @@
 const { Router } = require('express')
 const router = Router()
+const { ObjectId } = require('mongodb')
 
 const {
 	User,
@@ -16,17 +17,17 @@ router.post('/', async function (req, res, next) {
 			const user = await insertNewUser(req.body)
 			const validationError = user.validateSync()
 			if (validationError) {
-				res.status(400).send({ error: validationError.message })
+				return res.status(400).send({ error: validationError.message })
 			}
 
-			res.status(201).send({ _id: user._id })
+			return res.status(201).send({ id: user._id })
 		}
-		catch (err) {
-			res.status(400).send({ err: err })
+		catch (e) {
+			return res.status(400).send({ err: e })
 		}
 	}
 	else {
-		res.status(403).send({ error: "Only admins can create admin/instructor accounts." })
+		return res.status(403).send({ error: "Only admins can create admin/instructor accounts." })
     }
 })
 
@@ -44,48 +45,59 @@ router.post('/login', async function (req, res, next) {
 				res.status(201).send({
 					token: token
 				})
-			} else {
+			}
+			else {
 				res.status(401).send({
 					error: "Invalid authentication credentials"
 				})
 			}
-		} catch (err) {
-			next(err)
 		}
-	} else {
+		catch (e) {
+			next(e)
+		}
+	}
+	else {
 		res.status(400).send({
 			error: "Request body requires `email` and `password`."
 		})
 	}
-});
+})
 
 router.get('/:userid', requireAuthentication, async function( req, res, next ){
 	const userId = req.params.userid
-	const user = await User.findById(userId)
-	if (req.user === userId || req.role === 'admin') {
-		try {
-			if ((req.role === 'instructor' || req.role === 'admin') && user.role === 'instructor') {
-				const instructorCourses = await getInstructorCourses(userId)
-				return res.status(200).send({
-					user,
-					coursestaught: instructorCourses || "No courses taught"
-				})
+	try {
+		const user = await User.findById(userId)
+		if (req.user === userId || req.role === 'admin') {
+			try {
+				if ((req.role === 'instructor' || req.role === 'admin') && user.role === 'instructor') {
+					const instructorCourses = await getInstructorCourses(userId)
+					return res.status(200).send({
+						user,
+						coursestaught: instructorCourses || "No courses taught"
+					})
+				}
+				if ((req.role === 'student' || req.role === 'admin') && user.role === 'student') {
+					const studentCourses = await getStudentCourses(userId)
+					return res.status(200).send({
+						user,
+						coursestaken: studentCourses || "No courses taken"
+					})
+				}
 			}
-			if ((req.role === 'student' || req.role === 'admin') && user.role === 'student') {
-				const studentCourses = await getStudentCourses(userId)
-				return res.status(200).send({
-					user,
-					coursestaken: studentCourses || "No courses taken"
-				})
+			catch (e) {
+				next(e)
 			}
-		}catch(err) {
-			console.error(err)
 		}
-	}else {
-		res.status(403).send({
-			error: "Unauthorized accessed to data."
-		})
+		else {
+			res.status(403).send({
+				error: "Unauthorized accessed to data."
+			})
+		}
 	}
+	catch (e) {
+		next()
+    }
+	
 })
 
 module.exports = router
