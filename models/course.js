@@ -42,7 +42,7 @@ exports.addStudentsToRoster = async function (id, students) {
 	}
 }
 
-exports.removeStudentsToRoster = async function (id, students) {
+exports.removeStudentsFromRoster = async function (id, students) {
 	try {
 		const result = await Course.findByIdAndUpdate(id, { $pull: { roster: { $in: students } } }, { new: true })
 		return result
@@ -50,4 +50,14 @@ exports.removeStudentsToRoster = async function (id, students) {
 	catch (e) {
 		return e
 	}
+}
+
+exports.getInstructorCourses = async function (instructorId) {
+	const instructorCourses = await Course.find({ instructorid: instructorId })
+	return instructorCourses
+}
+
+exports.getStudentCourses = async function (studentId) {
+	const studentCourses = await Course.find({ rooster: { $in: [studentId] } }).select({ _id: 1 })
+	return studentCourses
 }

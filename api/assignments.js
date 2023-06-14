@@ -202,6 +202,7 @@ router.post('/:assignmentid/submissions', requireAuthentication, upload.single("
         submission = {
             assignmentid: assignmentId,
             studentid: submission.studentid,
+            timestamp: submission.timestamp || Date.now(),
             submission: req.file.filename,
             contentType: req.file.mimetype,
             path: req.file.path,
@@ -211,6 +212,7 @@ router.post('/:assignmentid/submissions', requireAuthentication, upload.single("
     else {
         submission = {
             assignmentid: assignmentId,
+            timestamp: submission.timestamp || Date.now(),
             submission: req.file.filename,
             contentType: req.file.mimetype,
             path: req.file.path,

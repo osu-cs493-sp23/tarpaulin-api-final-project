@@ -2,7 +2,6 @@ const mongoose = require('mongoose')
 const { Schema } = mongoose
 
 const bcrypt = require('bcrypt')
-const { Course } = require('./course')
 require('events').EventEmitter.defaultMaxListeners = 15;
 
 
@@ -74,16 +73,6 @@ exports.validateUser = async function (id, password) {
 	} else {
 		return null
 	}
-}
-
-exports.getInstructorCourses = async function (instructorId) {
-	const instructorCourses = await Course.find({ instructorid: instructorId })
-	return instructorCourses
-}
-
-exports.getStudentCourses = async function (studentId) {
-	const studentCourses = await Course.find({ rooster: { $in: [studentId] } }).select({ _id: 1 })
-	return studentCourses
 }
 
 exports.convertRosterToCSV = async function (students) {

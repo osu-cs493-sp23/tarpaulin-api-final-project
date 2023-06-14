@@ -1,10 +1,9 @@
 const { Router } = require('express')
 
-const { Course, addStudentsToRoster, removeStudentsToRoster } = require('../models/course')
+const { Course, addStudentsToRoster, removeStudentsFromRoster } = require('../models/course')
 const { convertRosterToCSV } = require('../models/user')
 const { getUserById } = require('../models/user')
 const { requireAuthentication } = require("../lib/auth")
-const { getDbReference } = require("../lib/mongo")
 const { Assignment } = require("../models/assignment")
 
 const router = Router()
@@ -13,19 +12,15 @@ const router = Router()
  * Fetch the list of all Courses
 */
 router.get('/', async function (req, res, next) {
-
     try {
-        const db = getDbReference()
-        const collection = db.collection("courses")
-
         /*
          * Compute page number based on optional query string parameter `page`.
          * Make sure page is within allowed bounds.
         */
         let page = parseInt(req.query.page) || 1
         const numPerPage = 10;
-        const numOfBusinesses = await collection.count()
-        const lastPage = Math.ceil(numOfBusinesses / numPerPage);
+        const numCourses = await Course.find()
+        const lastPage = Math.ceil(numCourses.length / numPerPage);
         page = page > lastPage ? lastPage : page;
         page = page < 1 ? 1 : page;
 
@@ -63,11 +58,10 @@ router.get('/', async function (req, res, next) {
             links.firstPage = '/courses?page=1';
         }
 
-        // Collect a page of courses without their MongoDB IDs
-        const pageCourses = await collection.find(queryParams, { projection: { _id: 0 }})
+        // Collect a page of courses without roster
+        const pageCourses = await Course.find(queryParams, { roster: 0 })
             .skip(start)
             .limit(numPerPage)
-            .toArray()
 
         /*
          * Construct and send response.
@@ -234,25 +228,26 @@ router.get('/:courseid/students', requireAuthentication, async function (req, re
 router.post('/:courseid/students', requireAuthentication, async function (req, res, next) {
     const courseId = req.params.courseid
     const course = await Course.findById(courseId)
-    if (req.user === course.instructorid.toString() || req.role === "admin") {
-        try {
+    try {
+        if (req.user === course.instructorid.toString() || req.role === "admin") {
             let updatedRoster = null
             if (req.body.add) {
                 updatedRoster = addStudentsToRoster(courseId, req.body.add)
             }
             if (req.body.remove) {
-                updatedRoster = removeStudentsToRoster(courseId, req.body.remove)
+                updatedRoster = removeStudentsFromRoster(courseId, req.body.remove)
             }
             res.status(200).send({ message: "Successfully updated roster!" })
+        
         }
-        catch (e) {
-            res.status(400).send({ error: e.message })
+        else {
+            res.status(403).send({
+                err: "Unauthorized to update roster."
+            })
         }
     }
-    else {
-        res.status(403).send({
-            err: "Unauthorized to update roster."
-        })
+    catch (e) {
+        res.status(400).send({ error: e.message })
     }
 })
 
@@ -278,9 +273,8 @@ router.get('/:courseid/roster', requireAuthentication, async function (req, res,
  * Fetch a list of the Assignments for the Course
 */
 router.get('/:courseid/assignments', async function (req, res, next) {
-    const courseId = req.params.courseid    
+    const courseId = req.params.courseid
 
-    const course = await Course.findById(courseId)
     try {
         const assignments = await Assignment.find( { courseid: courseId } )
         res.status(200).send(assignments)

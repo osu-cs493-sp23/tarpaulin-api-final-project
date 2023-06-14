@@ -5,11 +5,9 @@ const {
 	User,
 	insertNewUser,
 	validateUser,
-	getUserByEmail,
-	getInstructorCourses,
-	getStudentCourses
+	getUserByEmail
 } = require('../models/user')
-
+const { getInstructorCourses, getStudentCourses } = require('../models/course')
 const { generateAuthToken, requireAuthentication, checkRole } = require('../lib/auth')
 
 router.post('/', async function (req, res, next) {
