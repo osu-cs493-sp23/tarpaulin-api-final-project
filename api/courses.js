@@ -5,6 +5,7 @@ const { convertRosterToCSV } = require('../models/user')
 const { getUserById } = require('../models/user')
 const { requireAuthentication } = require("../lib/auth")
 const { Assignment } = require("../models/assignment")
+const { checkUserForStudent } = require("../models/user")
 
 const router = Router()
 
@@ -131,7 +132,7 @@ router.get('/:courseid', async function (req, res, next) {
         }
     }
     catch (e) {
-        next(e)
+        next()
     }
 })
 
@@ -141,27 +142,32 @@ router.get('/:courseid', async function (req, res, next) {
 */
 router.patch('/:courseid', requireAuthentication, async function (req, res, next) {
     const courseid = req.params.courseid
-    const course = await Course.findById(courseid)
-    const options = { new: true }
 
-    if (req.user === course.instructorid.toString() || req.role === "admin") {
-        try {
-            const courseToUpdate = await Course.findByIdAndUpdate(courseid, req.body, options)
-            if (courseToUpdate) {
-                res.status(200).send(courseToUpdate)
+    try {
+        const course = await Course.findById(courseid)
+        const options = { new: true }
+        if (req.user === course.instructorid.toString() || req.role === "admin") {
+            try {
+                const courseToUpdate = await Course.findByIdAndUpdate(courseid, req.body, options)
+                if (courseToUpdate) {
+                    res.status(200).send(courseToUpdate)
+                }
+                else {
+                    next()
+                }
             }
-            else {
-                next()
+            catch (e) {
+                next(e)
             }
         }
-        catch (e) {
-            next(e)
+        else {
+            res.status(403).send({
+                err: "Unauthorized to edit a course."
+            })
         }
     }
-    else {
-        res.status(403).send({
-            err: "Unauthorized to edit for another user."
-        })
+    catch (e) {
+        next()
     }
 })
 
@@ -174,7 +180,13 @@ router.delete('/:courseid', requireAuthentication, async function (req, res, nex
 
     if (req.role === "admin") {
         try {
-            const courseToDelete = await Course.findByIdAndDelete(courseId);
+            const assignments = await Assignment.find({ courseid: courseId })
+
+            for (assignment of assignments) {
+                await Assignment.findByIdAndDelete(assignment._id)
+            }
+
+            const courseToDelete = await Course.findByIdAndDelete(courseId)
             if (courseToDelete) {
                 res.status(204).send()
             }
@@ -188,7 +200,7 @@ router.delete('/:courseid', requireAuthentication, async function (req, res, nex
     }
     else {
         res.status(403).send({
-            err: "Unauthorized to delete for another user."
+            err: "Unauthorized to delete a course."
         })
     }
 })
@@ -236,9 +248,14 @@ router.post('/:courseid/students', requireAuthentication, async function (req, r
         const course = await Course.findById(courseId)
         if (req.user === course.instructorid.toString() || req.role === "admin") {
             try {
-
                 let updatedRoster = null
                 if (req.body.add) {
+                    for (id of req.body.add) {
+                        const isStudent = await checkUserForStudent(id)
+                        if (!isStudent) {
+                            return res.status(400).send({ error: `${id} is not a student.` })
+                        }
+                    }
                     updatedRoster = addStudentsToRoster(courseId, req.body.add)
                 }
                 if (req.body.remove) {

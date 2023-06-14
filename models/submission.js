@@ -1,5 +1,6 @@
 const mongoose = require('mongoose')
 const { Schema } = mongoose
+const { ObjectId } = require('mongodb')
 const fs = require("fs")
 
 const submissionSchema = new Schema({
@@ -54,4 +55,21 @@ exports.saveSubmissionFile = async function (submission) {
 				resolve(result._id)
 			})
 	})
+}
+
+exports.getSubmissionsByAssignmentId = async function (id, studentId) {
+	const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: "submissions" })
+	if (!ObjectId.isValid(id)) {
+		return null
+	}
+	else {
+		const query = { 'metadata.assignmentid': id };
+
+		if (studentId) {
+			query['metadata.studentid'] = studentId;
+		}
+		const projection = { 'metadata.contentType': 1, 'metadata.studentid': 1, 'metadata.timestamp': 1, 'metadata.grade': 1, _id: 1 };
+		const results = await bucket.find(query).project(projection).toArray()
+		return results
+	}
 }

@@ -3,9 +3,9 @@ const { Router } = require('express')
 const multer = require("multer")
 const crypto = require("node:crypto")
 
-const { Assignment, getSubmissionsByAssignmentId } = require('../models/assignment')
+const { Assignment } = require('../models/assignment')
 const { Course, isEnrolled } = require('../models/course')
-const { Submission, saveSubmissionFile } = require('../models/submission')
+const { Submission, saveSubmissionFile, getSubmissionsByAssignmentId } = require('../models/submission')
 const { User } = require('../models/user')
 const { requireAuthentication } = require("../lib/auth")
 
@@ -42,21 +42,26 @@ router.post('/', requireAuthentication, async function (req, res, next) {
         res.status(400).send({ error: validationError.message })
     }
 
-    const course = await Course.findById(assignment.courseid)
+    try {
+        const course = await Course.findById(assignment.courseid)
 
-    if (req.user === course.instructorid.toString() || req.role === "admin") {
-        try {
-            await assignment.save()
-            res.status(201).send({ id: assignment._id })
+        if (req.user === course.instructorid.toString() || req.role === "admin") {
+            try {
+                await assignment.save()
+                res.status(201).send({ id: assignment._id })
+            }
+            catch (e) {
+                res.status(400).send({ error: e.message })
+            }
         }
-        catch (e) {
-            res.status(400).send({ error: e.message })
+        else {
+            res.status(403).send({
+                err: "Unauthorized to post an assignment."
+            })
         }
     }
-    else {
-        res.status(403).send({
-            err: "Unauthorized to post for another user."
-        })
+    catch (e) {
+        res.status(400).send({ error: e.message })
     }
 })
 
@@ -96,7 +101,7 @@ router.patch('/:assignmentid', requireAuthentication, async function (req, res, 
         }
         else {
             res.status(403).send({
-                err: "Unauthorized to edit for another user."
+                err: "Unauthorized to edit assignment."
             })
         }
     }
@@ -111,6 +116,12 @@ router.delete('/:assignmentid', requireAuthentication, async function (req, res,
     try {
         const assignment = await Assignment.findById(assignmentId)
         const course = await Course.findById(assignment.courseid)
+
+        const submissions = await Submission.find({ assignmentid: assignmentId })
+
+        for (submission of submissions) {
+            await Submission.findByIdAndDelete(submission._id)
+        }
 
         if (req.user === course.instructorid.toString() || req.role === "admin") {
             try {
@@ -146,14 +157,15 @@ router.get('/:assignmentid/submissions', requireAuthentication, async function (
 
         if (req.user === course.instructorid.toString() || req.role === "admin") {
             try {
-                const result = await getSubmissionsByAssignmentId(assignmentId)
-
-                let page = parseInt(req.query.page) || 1
-                page = page < 1 ? 1 : page
-                const numPerPage = 10
-                const offset = (page - 1) * numPerPage
-
                 const studentId = req.query.studentId || null
+                let page = parseInt(req.query.page) || 1
+
+                const result = await getSubmissionsByAssignmentId(assignmentId, studentId)
+                
+                const numPerPage = 10;
+                const lastPage = Math.ceil(result.length / numPerPage);
+                page = page > lastPage ? lastPage : page;
+                page = page < 1 ? 1 : page;
 
                 const student = User.findById(studentId)
 
@@ -161,15 +173,13 @@ router.get('/:assignmentid/submissions', requireAuthentication, async function (
                     next()
                 }
 
+                const start = (page - 1) * numPerPage
+                const end = start + numPerPage
+                const pageSubmissions = result.slice(start, end);
+
                 /*
                 * Generate HATEOAS links for surrounding pages.
                 */
-                const lastPage = Math.ceil(result.length / numPerPage)
-
-                const start = (page - 1) * numPerPage;
-                const end = start + numPerPage;
-                const pageAssignments = result.slice(start, end);
-
                 const links = {}
                 if (page < lastPage) {
                     links.nextPage = `/assignments/${assignmentId}/submissions?page=${page + 1}`
@@ -184,7 +194,7 @@ router.get('/:assignmentid/submissions', requireAuthentication, async function (
                     * Construct and send response.
                     */
                 res.status(200).json({
-                    assignments: pageAssignments,
+                    submissions: pageSubmissions,
                     pageNumber: page,
                     totalPages: lastPage,
                     pageSize: numPerPage,
@@ -257,7 +267,7 @@ router.post('/:assignmentid/submissions', requireAuthentication, upload.single("
     }
     else {
         res.status(403).send({
-            err: "Unauthorized to post for another user."
+            err: "Unauthorized to post submission."
         })
     }
 })

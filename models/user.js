@@ -75,6 +75,16 @@ exports.validateUser = async function (id, password) {
 	}
 }
 
+exports.checkUserForStudent = async function (id) {
+	const student = await User.findById(id)
+	if (student.role === "student") {
+		return true
+	}
+	else {
+		return false
+    }
+}
+
 exports.convertRosterToCSV = async function (students) {
 	try {
 		let studentsCSV = ''

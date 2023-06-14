@@ -1,6 +1,5 @@
 const { Router } = require('express')
 const router = Router()
-const { ObjectId } = require('mongodb')
 
 const {
 	User,
@@ -23,7 +22,7 @@ router.post('/', async function (req, res, next) {
 			return res.status(201).send({ id: user._id })
 		}
 		catch (e) {
-			return res.status(400).send({ err: e })
+			next(e)
 		}
 	}
 	else {
