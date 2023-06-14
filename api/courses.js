@@ -1,6 +1,6 @@
 const { Router } = require('express')
 
-const { Course, addStudentsToRoster, removeStudentsFromRoster } = require('../models/course')
+const { Course, addStudentsToRoster, removeStudentsFromRoster, isEnrolled } = require('../models/course')
 const { convertRosterToCSV } = require('../models/user')
 const { getUserById } = require('../models/user')
 const { requireAuthentication } = require("../lib/auth")

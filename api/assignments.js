@@ -69,7 +69,12 @@ router.get('/:assignmentid', async function (req, res, next) {
     const assignmentId = req.params.assignmentid
     try {
         const assignment = await Assignment.findById(assignmentId)
-        res.status(200).send(assignment)
+        if (assignment) {
+            res.status(200).send(assignment)
+        }
+        else {
+            next()
+        }
     }
     catch (e) {
         next()
@@ -213,7 +218,7 @@ router.get('/:assignmentid/submissions', requireAuthentication, async function (
         }
     }
     catch (e) {
-        next()
+        next(e)
     }
 })
 
